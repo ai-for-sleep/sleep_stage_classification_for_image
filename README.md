@@ -33,15 +33,3 @@ python 2_train_lstm_fold.py
 ```
 python 3_test.py
 ```
-
-## Class Activation Maps
-
-```
-python 4_cam.py
-```
-
-## DEMO
-
-```
-python 5_demo.py
-```
