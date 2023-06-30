@@ -6,6 +6,9 @@ import timm
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
+from sklearn.metrics import f1_score
 from models import SleepStager
 from utils import *
 
@@ -115,3 +118,29 @@ for i in range(0, N_SPLIT):
     fold_labels.append(total_labels)
     fold_predicts.append(total_predicted)
     fold_probs.append(total_prob)
+
+y_pred = fold_probs.mean(0).argmax(1)
+y_true = fold_labels[0]
+
+cm = confusion_matrix(y_pred, y_true)
+
+# calculate macro F1 score
+macro_f1 = f1_score(y_true, y_pred, average='macro')
+
+# calculate micro F1 score
+micro_f1 = f1_score(y_true, y_pred, average='micro')
+
+# calculate weighted F1 score
+weighted_f1 = f1_score(y_true, y_pred, average='weighted')
+
+print("Macro F1 score:", macro_f1)
+print("Micro F1 score:", micro_f1)
+print("Weighted F1 score:", weighted_f1)
+
+fig, ax = plot_confusion_matrix(conf_mat=cm,
+                                colorbar=True,
+                                show_absolute=False,
+                                show_normed=True,
+                                class_names=LABEL_NAME)
+
+plt.savefig('result.png')

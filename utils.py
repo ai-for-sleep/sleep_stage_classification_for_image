@@ -372,26 +372,51 @@ class SleepConvDataset(Dataset):
             patient_number = patient['Patient_Number']
             events = patient['Event']
             branch = '-'.join(patient_number.split('-')[:-1])
-            path = self.data_path / branch / \
-                patient_number / f"{patient_number}_standard"
+            path = self.data_path / branch / patient_number / f"{patient_number}_standard"
 
-            if 'NX' in patient_number:
-                for n in range(0, len(events)):
-                    cur_event = events[n]
+            for n in range(0, len(events)):
+                cur_event = events[n]
 
-                    stage = cur_event['Event_Label']
+                stage = cur_event['Event_Label']
+                
+                if stage == 'R':
+                    stage = 'REM'
 
-                    if stage == 'R':
-                        stage = 'REM'
+                if stage in self.label_name:
+                    if start:
+                        start = False
 
-                    if stage in self.label_name:
-                        if start:
-                            start = False
+                        init_start_epoch = int(cur_event['Start_Epoch'])
+                        init_end_epoch = int(cur_event['End_Epoch'])
 
-                            init_start_epoch = int(cur_event['Start_Epoch'])
-                            init_end_epoch = int(cur_event['End_Epoch'])
+                        for epoch in range(init_start_epoch, init_end_epoch):
+                            image_number = str(epoch).zfill(4)
 
-                            for epoch in range(init_start_epoch, init_end_epoch):
+                            label = self.label_name.index(stage)
+                            image_path = path / f"{patient_number}_{image_number}.png"
+
+                            if os.path.exists(image_path):
+                                paths.append(image_path)
+                                labels.append(label)
+
+                    else:
+                        start_epoch = int(cur_event['Start_Epoch'])
+                        end_epoch = int(cur_event['End_Epoch'])
+
+                        if init_end_epoch <= start_epoch:
+                            if not init_end_epoch == start_epoch:
+                                for epoch in range(init_end_epoch, start_epoch):
+                                    image_number = str(epoch).zfill(4)
+
+                                    label = self.label_name.index("Wake")
+                                    image_path = path / \
+                                        f"{patient_number}_{image_number}.png"
+
+                                    if os.path.exists(image_path):
+                                        paths.append(image_path)
+                                        labels.append(label)
+
+                            for epoch in range(start_epoch, end_epoch):
                                 image_number = str(epoch).zfill(4)
 
                                 label = self.label_name.index(stage)
@@ -402,43 +427,16 @@ class SleepConvDataset(Dataset):
                                     paths.append(image_path)
                                     labels.append(label)
 
-                        else:
-                            start_epoch = int(cur_event['Start_Epoch'])
-                            end_epoch = int(cur_event['End_Epoch'])
+                            init_end_epoch = end_epoch
 
-                            if init_end_epoch <= start_epoch:
-                                if not init_end_epoch == start_epoch:
-                                    for epoch in range(init_end_epoch, start_epoch):
-                                        image_number = str(epoch).zfill(4)
+            if len(paths) == 0:
+                # print("Empty: " + str(path))
+                pass
 
-                                        label = self.label_name.index("Wake")
-                                        image_path = path / \
-                                            f"{patient_number}_{image_number}.png"
-
-                                        if os.path.exists(image_path):
-                                            paths.append(image_path)
-                                            labels.append(label)
-
-                                for epoch in range(start_epoch, end_epoch):
-                                    image_number = str(epoch).zfill(4)
-
-                                    label = self.label_name.index(stage)
-                                    image_path = path / \
-                                        f"{patient_number}_{image_number}.png"
-
-                                    if os.path.exists(image_path):
-                                        paths.append(image_path)
-                                        labels.append(label)
-
-                                init_end_epoch = end_epoch
-
-                if len(paths) == 0:
-                    print(patient_number)
-
-                else:
-                    self.total_paths += paths
-                    self.total_labels += labels
-                    self.total_numbers += patient_number
+            else:
+                self.total_paths += paths
+                self.total_labels += labels
+                self.total_numbers += patient_number
 
     def __len__(self):
         return len(self.total_labels)
